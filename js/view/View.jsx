@@ -27,7 +27,8 @@ export class View extends React.Component {
       cy: cyInit({ headless: true }), // cytoscape mounted after Graph component has mounted
       sbgnText: {},
       name: '',
-      datasource: ''
+      datasource: '',
+      comments: []
     };
 
     PathwayCommonsService.query(query.uri, 'SBGN')
@@ -39,8 +40,10 @@ export class View extends React.Component {
 
     PathwayCommonsService.query(query.uri, 'json', 'Named/displayName')
       .then(responseObj => {
+        const title = responseObj ? responseObj.traverseEntry[0].value.pop() : '';
+        document.title = title;
         this.setState({
-          name: responseObj ? responseObj.traverseEntry[0].value.pop() : ''
+          name: title
         });
       });
 
@@ -48,6 +51,24 @@ export class View extends React.Component {
       .then(responseObj => {
         this.setState({
           datasource: responseObj ? responseObj.traverseEntry[0].value.pop() : ''
+        });
+      });
+
+    PathwayCommonsService.query(query.uri, 'json', 'Entity/comment')
+      .then(responses => {
+        const comments_arr = responses ? responses.traverseEntry[0].value : [];
+        var comments_str = '';
+        comments_arr.map(comment => {
+          comments_str += comment+'\n';
+        });
+        const metas = document.getElementsByTagName('meta');
+        for (var i = 0; i < metas.length; i++) {
+          if (metas[i].getAttribute('name') == 'description') {
+            metas[i].setAttribute('content', comments_str);
+          }
+        }
+        this.setState({
+          comments: comments_arr
         });
       });
 
@@ -150,7 +171,7 @@ export class View extends React.Component {
           }
           <Graph cy={this.state.cy} sbgnText={this.state.sbgnText} {...this.props}/>
           {/* Menu Modal */}
-          <ModalFramework cy={this.state.cy} onHide={() => this.setState({active: ''})} {...this.state} {...this.props}/>
+          <ModalFramework cy={this.state.cy} comments={this.state.comments} onHide={() => this.setState({active: ''})} {...this.state} {...this.props}/>
         </div>
       );
     }
